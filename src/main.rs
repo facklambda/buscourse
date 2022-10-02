@@ -1,21 +1,24 @@
 use cursive::{event::Key, menu, traits::*, views::Dialog};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use reqwest;
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 
-// This examples shows how to configure and use a menubar at the top of the
-// application.
-#[tokio::main]
-async fn agencies_json() -> Result<(), Box<dyn std::error::Error>> {
+#[derive(Serialize, Deserialize, Debug)]
+struct Agency {
+    agency_id: i32,
+    agency_name: String,
+}
 
-    let resp = reqwest::get("https://svc.metrotransit.org/nextripv2/agencies")
+
+#[tokio::main]
+async fn get_agencies() -> Result<Vec<Agency>, reqwest::Error> {
+    let agencies: Vec<Agency> = reqwest::get("https://svc.metrotransit.org/nextripv2/agencies")
         .await?
         .json()
         .await?;
-    println!("{:#?}", resp);
-    Ok(())
+    // println!("{:#?}", agencies);
+    return Ok(agencies);
 }
 
 fn main() {
@@ -24,10 +27,8 @@ fn main() {
     // We'll use a counter to name new files.
     let counter = AtomicUsize::new(1);
 
-    let agencies = agencies_json();
-
-    println!("{:#?}", agencies);
-
+    let agency_list = get_agencies().unwrap();
+ 
     // The menubar is a list of (label, menu tree) pairs.
     siv.menubar()
         // We add a new "File" tree
@@ -68,8 +69,8 @@ fn main() {
                 // and cannot be selected.
                 .delimiter()
                 .with(|tree| {
-                    for i in 1..10 {
-                        tree.add_leaf(format!("Option {}", i), |_| ());
+                    for i in agency_list {
+                        tree.add_leaf(format!("{}", i.agency_name), |_| ());
                     }
                 }),
         )
@@ -105,5 +106,5 @@ fn main() {
 
     siv.add_layer(Dialog::text("Hit <Esc> to show the menu!"));
 
-    //siv.run();
+    siv.run();
 }
