@@ -1,25 +1,7 @@
+mod metrotransit;
 use cursive::{event::Key, menu, traits::*, views::Dialog};
+use metrotransit::{get_agencies, get_routes};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use reqwest;
-use serde::{Deserialize, Serialize};
-
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Agency {
-    agency_id: i32,
-    agency_name: String,
-}
-
-
-#[tokio::main]
-async fn get_agencies() -> Result<Vec<Agency>, reqwest::Error> {
-    let agencies: Vec<Agency> = reqwest::get("https://svc.metrotransit.org/nextripv2/agencies")
-        .await?
-        .json()
-        .await?;
-    // println!("{:#?}", agencies);
-    return Ok(agencies);
-}
 
 fn main() {
     let mut siv = cursive::default();
@@ -28,7 +10,9 @@ fn main() {
     let counter = AtomicUsize::new(1);
 
     let agency_list = get_agencies().unwrap();
- 
+
+    let route_list = get_routes().unwrap();
+
     // The menubar is a list of (label, menu tree) pairs.
     siv.menubar()
         // We add a new "File" tree
@@ -59,9 +43,13 @@ fn main() {
                         for i in 1..100 {
                             // We don't actually do anything here,
                             // but you could!
-                            tree.add_item(menu::Item::leaf(format!("Item {}", i), |_| ()).with(|s| {
-                                if i % 5 == 0 { s.disable(); }
-                            }))
+                            tree.add_item(menu::Item::leaf(format!("Item {}", i), |_| ()).with(
+                                |s| {
+                                    if i % 5 == 0 {
+                                        s.disable();
+                                    }
+                                },
+                            ))
                         }
                     }),
                 )
@@ -80,18 +68,14 @@ fn main() {
                 .subtree(
                     "Help",
                     menu::Tree::new()
-                        .leaf("General", |s| {
-                            s.add_layer(Dialog::info("Help message!"))
-                        })
+                        .leaf("General", |s| s.add_layer(Dialog::info("Help message!")))
                         .leaf("Online", |s| {
                             let text = "Google it yourself!\n\
                                         Kids, these days...";
                             s.add_layer(Dialog::info(text))
                         }),
                 )
-                .leaf("About", |s| {
-                    s.add_layer(Dialog::info("Cursive v0.0.0"))
-                }),
+                .leaf("About", |s| s.add_layer(Dialog::info("Cursive v0.0.0"))),
         )
         .add_delimiter()
         .add_leaf("Quit", |s| s.quit());
